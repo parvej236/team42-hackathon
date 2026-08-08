@@ -173,7 +173,7 @@ services:
       dockerfile: Dockerfile
     container_name: team42-frontend
     ports:
-      - "80:80"
+      - "8085:80"
     depends_on:
       - api-gateway
     networks:
