@@ -75,6 +75,27 @@ services:
     networks:
       - team42-network
 
+  user-service:
+    build:
+      context: ./backend
+      dockerfile: services/user-service/Dockerfile
+    container_name: team42-user-service
+    ports:
+      - "8085:8085"
+    environment:
+      DB_HOST: "postgres"
+      DB_USER: "root"
+      DB_PASSWORD: "Quanfey"
+      CONFIG_SERVER_URL: "http://config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_started
+    networks:
+      - team42-network
+
   # Core Business Microservices
   auth-service:
     build:
@@ -173,7 +194,7 @@ services:
       dockerfile: Dockerfile
     container_name: team42-frontend
     ports:
-      - "8085:80"
+      - "80:80"
     depends_on:
       - api-gateway
     networks:
