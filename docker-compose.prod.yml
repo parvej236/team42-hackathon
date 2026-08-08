@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: team42-postgres-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prod_secure_password_42}
+    volumes:
+      - ./docker/postgres/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
+      - postgres_prod_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - team42-prod-network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: team42-rabbitmq-prod
+    volumes:
+      - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+    restart: always
+    networks:
+      - team42-prod-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: team42-frontend-prod
+    ports:
+      - "80:80"
+    restart: always
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.yourdomain.com/api/v1}
+    networks:
+      - team42-prod-network
+
+networks:
+  team42-prod-network:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:

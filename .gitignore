@@ -1,0 +1,21 @@
+# Log files
+*.log
+.backend_pids
+
+# Build & Dependency Directories
+node_modules/
+dist/
+target/
+.mvn/
+*.jar
+*.war
+
+# Environment & IDE
+.env
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# PostgreSQL Data
+postgres-data/

@@ -1,0 +1,12 @@
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: false
+    hostname: localhost
+
+app:
+  jwt:
+    secret: Team42SecretKeyForJwtTokenGenerationAndValidation2026HexSecureKey!
+    expiration-ms: 86400000

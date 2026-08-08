@@ -1,0 +1,192 @@
+services:
+
+  # PostgreSQL Central Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: team42-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: team42
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: Quanfey
+    volumes:
+      - ./docker/postgres/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - team42-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d team42"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Unreliable Mock Gateway provided by IEEE CS Hackathon
+  gateway:
+    image: asifmahmoud414/mock-gateway:latest
+    container_name: mock-gateway
+    ports:
+      - "9000:9000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - team42-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Platform Infrastructure
+  config-server:
+    build:
+      context: ./backend
+      dockerfile: platform/config-server/Dockerfile
+    container_name: team42-config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - team42-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  discovery-server:
+    build:
+      context: ./backend
+      dockerfile: platform/discovery-server/Dockerfile
+    container_name: team42-discovery-server
+    ports:
+      - "8761:8761"
+    depends_on:
+      config-server:
+        condition: service_started
+    networks:
+      - team42-network
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: platform/api-gateway/Dockerfile
+    container_name: team42-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+    depends_on:
+      - discovery-server
+    networks:
+      - team42-network
+
+  # Core Business Microservices
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: services/auth-service/Dockerfile
+    container_name: team42-auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: "postgres"
+      DB_USER: "root"
+      DB_PASSWORD: "Quanfey"
+      CONFIG_SERVER_URL: "http://config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - team42-network
+
+  product-service:
+    build:
+      context: ./backend
+      dockerfile: services/product-service/Dockerfile
+    container_name: team42-product-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: "postgres"
+      DB_USER: "root"
+      DB_PASSWORD: "Quanfey"
+      CONFIG_SERVER_URL: "http://config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - team42-network
+
+  inventory-service:
+    build:
+      context: ./backend
+      dockerfile: services/inventory-service/Dockerfile
+    container_name: team42-inventory-service
+    ports:
+      - "8083:8083"
+    environment:
+      DB_HOST: "postgres"
+      DB_USER: "root"
+      DB_PASSWORD: "Quanfey"
+      HOLD_TTL_SECONDS: "${HOLD_TTL_SECONDS:-60}"
+      CONFIG_SERVER_URL: "http://config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - team42-network
+
+  payment-service:
+    build:
+      context: ./backend
+      dockerfile: services/payment-service/Dockerfile
+    container_name: team42-payment-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: "postgres"
+      DB_USER: "root"
+      DB_PASSWORD: "Quanfey"
+      MOCK_GATEWAY_URL: "http://gateway:9000"
+      CALLBACK_URL: "http://payment-service:8084/api/v1/payments/webhook"
+      GATEWAY_SECRET: "z2p-2026-secret"
+      CONFIG_SERVER_URL: "http://config-server:8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gateway:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+    networks:
+      - team42-network
+
+  # Frontend Vue 3 CinemaSeat Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: team42-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - team42-network
+
+networks:
+  team42-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
