@@ -1,7 +1,7 @@
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 COPY . .
-RUN mvn clean package -pl services/auth-service -am -DskipTests
+RUN mvn clean package -pl services/auth-service -am -DskipTests && rm -f services/auth-service/target/*.original
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

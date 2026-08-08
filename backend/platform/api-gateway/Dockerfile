@@ -1,7 +1,7 @@
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 COPY . .
-RUN mvn clean package -pl platform/api-gateway -am -DskipTests
+RUN mvn clean package -pl platform/api-gateway -am -DskipTests && rm -f platform/api-gateway/target/*.original
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
