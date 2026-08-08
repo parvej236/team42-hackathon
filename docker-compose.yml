@@ -47,11 +47,6 @@ services:
       - "8888:8888"
     networks:
       - team42-network
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 
   discovery-server:
     build:
@@ -98,7 +93,7 @@ services:
       postgres:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - team42-network
 
@@ -119,7 +114,7 @@ services:
       postgres:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - team42-network
 
@@ -141,7 +136,7 @@ services:
       postgres:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - team42-network
 
@@ -167,7 +162,7 @@ services:
       gateway:
         condition: service_started
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - team42-network
 
